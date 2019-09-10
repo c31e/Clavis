@@ -14,14 +14,14 @@
 //
 //}
 //
-//public class BulkAnalyzer2 implements Runnable {
+//public class BulkAnalyzer implements Runnable {
 //
 //    private final String[] arr;
 //    private int count;
 //    long localTotalCount;
 //    long localTotalLength;
 //
-//    BulkAnalyzer2(String[] arr, int count) {
+//    BulkAnalyzer(String[] arr, int count) {
 //        this.arr = arr;
 //        this.count = count;
 //        localTotalCount = 0;

@@ -43,7 +43,7 @@ public class Clavis {
 
     static String main_log = "D:\\log\\main_log.txt";
     static String backup_log = "D:\\log\\backup_log.txt";
-    static String txtDirectory = "D:\\txt\\";
+    static String txtDirectory = "C:\\passwords\\";
     static String dictionaryEnglishWordsDirectory = "dictionaries\\words_alpha.txt";
     static String dictionaryEnglishLastNamesDirectory = "dictionaries\\last-names.txt";
     static String resultsMaskLocation = "D:\\log\\maskResults.csv";
@@ -104,16 +104,9 @@ public class Clavis {
             System.out.println("Connected to Server");
             stmt = conn.createStatement();
 
-            ArrayList<String> databases = new ArrayList();
-
-            ResultSet rs = conn.getMetaData().getCatalogs();
-
-            while (rs.next()) {
-                String temp = rs.getString("TABLE_CAT");
-                databases.add(temp);
-
-            }
-            if (databases.contains(DATABASE)) {
+           
+            
+            if (isTablePresent(DATABASE)) {
                 System.out.println("using database \'" + DATABASE + "\'");
             } else {
                 initialize();
@@ -166,10 +159,25 @@ public class Clavis {
             } else if (input.equals("7")) {
                 System.out.println("Created by Daniel Brewer on 6/02/19");
             } else if (input.equals("8")) {
-                analyzeDatabase();
+                //analyzeDatabase();
             }
         }
         System.out.println("-------------------- GOODBYTE ---------------------");
+    }
+    
+    public static boolean isTablePresent(String table){ 
+        ArrayList<String> databases = new ArrayList();
+        try {
+            ResultSet rs = conn.getMetaData().getCatalogs();
+            while (rs.next()) {
+                String temp = rs.getString("TABLE_CAT");
+                databases.add(temp);
+
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return databases.contains(table);
     }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
@@ -209,7 +217,7 @@ public class Clavis {
     static int analyzedTotalCount;
     static long analyzedTotalLength;
     //
-    static MaskObj[] maskData;
+    //static MaskObj[] maskData;
     static int maskDataCount;
     //
     static String[] maskData_allNumbers;
@@ -232,150 +240,150 @@ public class Clavis {
 //
     static int countWithallWords;
 
-    public static void analyzeDatabase() {
-        System.out.println("--------------------- ANALYZE ---------------------");
-        //System.out.println(fileSize(dictionaryEnglishWordsDirectory));
-        //System.out.println(fileSize(dictionaryEnglishLastNamesDirectory));
-        dicWords = new String[369650];
-        dicWordsCount = new int[369650];
-
-        dicLastNames = new String[88698];
-        dicLastNamesCount = new int[88698];
-        try {
-            BufferedReader in = new BufferedReader(new FileReader(txtDirectory + dictionaryEnglishWordsDirectory));
-            String line = in.readLine();
-            int x = 0;
-            while (line != null) {
-                if (line.length() > 2) {
-                    dicWords[x] = line.toLowerCase();
-                    x++;
-                }
-
-                line = in.readLine();
-            }
-            //
-            in = new BufferedReader(new FileReader(txtDirectory + dictionaryEnglishLastNamesDirectory));
-            line = in.readLine();
-            x = 0;
-            while (line != null) {
-                if (line.length() > 2) {
-                    dicLastNames[x] = line.toLowerCase();
-                    x++;
-                }
-
-                line = in.readLine();
-            }
-
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
-        }
-//        for(int x =0;x<1000000;x++){
-//            if(dicWords[x]==null){
-//                System.out.println(x);
-//                break;
-//            }
-//        }
-//        for(int x =0;x<1000000;x++){
-//            if(dicLastNames[x]==null){
-//                System.out.println(x);
-//                break;
-//            }
-//        }
-
-        Arrays.sort(dicWords, new StringLengthComparator());
-        Arrays.sort(dicLastNames, new StringLengthComparator());
-//        for (int x = 0; x < dicWords.length; x++) {
+//    public static void analyzeDatabase() {
+//        System.out.println("--------------------- ANALYZE ---------------------");
+//        //System.out.println(fileSize(dictionaryEnglishWordsDirectory));
+//        //System.out.println(fileSize(dictionaryEnglishLastNamesDirectory));
+//        dicWords = new String[369650];
+//        dicWordsCount = new int[369650];
 //
-//            if (dicWords[x].contains("testing")) {
-//                System.out.println("testing " + x);
+//        dicLastNames = new String[88698];
+//        dicLastNamesCount = new int[88698];
+//        try {
+//            BufferedReader in = new BufferedReader(new FileReader(txtDirectory + dictionaryEnglishWordsDirectory));
+//            String line = in.readLine();
+//            int x = 0;
+//            while (line != null) {
+//                if (line.length() > 2) {
+//                    dicWords[x] = line.toLowerCase();
+//                    x++;
+//                }
+//
+//                line = in.readLine();
 //            }
-//            if (dicWords[x].contains("test")) {
-//                System.out.println("test " + x + "original:" + dicWords[x]);
+//            //
+//            in = new BufferedReader(new FileReader(txtDirectory + dictionaryEnglishLastNamesDirectory));
+//            line = in.readLine();
+//            x = 0;
+//            while (line != null) {
+//                if (line.length() > 2) {
+//                    dicLastNames[x] = line.toLowerCase();
+//                    x++;
+//                }
+//
+//                line = in.readLine();
 //            }
 //
+//        } catch (FileNotFoundException ex) {
+//            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
+//        } catch (IOException ex) {
+//            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
 //        }
-
-        // dicWords
-        //dicLastNames
-        countWithallWords = 0;
-        maskData = new MaskObj[maskObjArraySize];//limit 2 billion//500000000
-        maskData_allNumbers = new String[maskNumberArraySize];
-        maskData_startNumbers = new String[maskNumberArraySize];
-        maskData_endNumbers = new String[maskNumberArraySize];
-        maskData_allNumbersIncrement = new int[maskNumberArraySize];
-        maskData_startNumbersIncrement = new int[maskNumberArraySize];
-        maskData_endNumbersIncrement = new int[maskNumberArraySize];
-        //
-
-        maskDataCount = 0;
-        analyzedTotalCount = 0;
-        analyzedTotalLength = 0;
-
-        maskData_allNumbersCount = 0;
-        maskData_startNumbersCount = 0;
-        maskData_endNumbersCount = 0;
-
-        analyzeExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(analyzeMaxActiveThreads);
-        Display display = new Display((long) 16, "analyze", updateTime);
-        Thread displayThread = new Thread(display);
-
-        displayThread.start();
-
-        try {
-            for (int x = 0; x < tableNames.length; x++) {
-                ResultSet rs = stmt.executeQuery("select * from " + tableNames[x]);
-                String[] arr = new String[analyzeDataSentLimit];
-                int loopCount = 0;
-                while (rs.next()) {
-                    arr[loopCount++] = rs.getString(1);
-                    if (loopCount == analyzeDataSentLimit) {
-                        analyzeExecutor.submit(new BulkAnalyzer2(arr, loopCount));
-                        loopCount = 0;
-                    }
-                    while (threadInfo("analyze waiting") >= analyzeMaxWaitingThreads) {
-                        Thread.sleep(500);
-                    }
-                }
-                analyzeExecutor.submit(new BulkAnalyzer2(arr, loopCount));
-                display.increaseProgress();
-            }
-            while (threadInfo("analyze active") != 0) {
-                Thread.sleep(100);
-            }
-            display.increaseProgress();
-            writeMaskObjArrayToCSV(maskData);
-            writeNumberArrayToCSV(maskData_allNumbers, maskData_allNumbersIncrement,
-                    maskData_startNumbers, maskData_startNumbersIncrement, maskData_endNumbers,
-                    maskData_endNumbersIncrement);
-
-            writeWordArrayToCSV(dicWords, dicWordsCount, dicLastNames, dicLastNamesCount);
-
-            display.stopDisplay();
-            displayThread.join();
-        } catch (SQLException ex) {
-            System.out.println("error from Main Class [2]");
-            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        System.out.println("\nCount: " + myFormatter.format(analyzedTotalCount));
-        System.out.println("Length: " + myFormatter2.format(analyzedTotalLength / (double) analyzedTotalCount));
-        System.out.println("All words passwords: " + myFormatter.format(countWithallWords) + " "
-                + myFormatter2.format(((countWithallWords / (double) analyzedTotalCount)) * 100) + "%");
-        System.out.println("Mask Array         :" + myFormatter2.format((maskDataCount / (double) maskObjArraySize) * 100.0) + "% full");
-        System.out.println("All numbers array  :" + myFormatter2.format((maskData_allNumbersCount / (double) maskNumberArraySize) * 100.0) + "% full");
-        System.out.println("Start numbers array:" + myFormatter2.format((maskData_startNumbersCount / (double) maskNumberArraySize) * 100.0) + "% full");
-        System.out.println("End numbers array  :" + myFormatter2.format((maskData_endNumbersCount / (double) maskNumberArraySize) * 100.0) + "% full");
-        System.out.println("Mask Data -> D:\\log\\results.csv");
-
-        maskData = null;
-        maskData_allNumbers = null;
-        maskData_startNumbers = null;
-        maskData_endNumbers = null;
-    }
+////        for(int x =0;x<1000000;x++){
+////            if(dicWords[x]==null){
+////                System.out.println(x);
+////                break;
+////            }
+////        }
+////        for(int x =0;x<1000000;x++){
+////            if(dicLastNames[x]==null){
+////                System.out.println(x);
+////                break;
+////            }
+////        }
+//
+//        Arrays.sort(dicWords, new StringLengthComparator());
+//        Arrays.sort(dicLastNames, new StringLengthComparator());
+////        for (int x = 0; x < dicWords.length; x++) {
+////
+////            if (dicWords[x].contains("testing")) {
+////                System.out.println("testing " + x);
+////            }
+////            if (dicWords[x].contains("test")) {
+////                System.out.println("test " + x + "original:" + dicWords[x]);
+////            }
+////
+////        }
+//
+//        // dicWords
+//        //dicLastNames
+//        countWithallWords = 0;
+//      //  maskData = new MaskObj[maskObjArraySize];//limit 2 billion//500000000
+//        maskData_allNumbers = new String[maskNumberArraySize];
+//        maskData_startNumbers = new String[maskNumberArraySize];
+//        maskData_endNumbers = new String[maskNumberArraySize];
+//        maskData_allNumbersIncrement = new int[maskNumberArraySize];
+//        maskData_startNumbersIncrement = new int[maskNumberArraySize];
+//        maskData_endNumbersIncrement = new int[maskNumberArraySize];
+//        //
+//
+//        maskDataCount = 0;
+//        analyzedTotalCount = 0;
+//        analyzedTotalLength = 0;
+//
+//        maskData_allNumbersCount = 0;
+//        maskData_startNumbersCount = 0;
+//        maskData_endNumbersCount = 0;
+//
+//        analyzeExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(analyzeMaxActiveThreads);
+//        Display display = new Display((long) 16, "analyze", updateTime);
+//        Thread displayThread = new Thread(display);
+//
+//        displayThread.start();
+//
+//        try {
+//            for (int x = 0; x < tableNames.length; x++) {
+//                ResultSet rs = stmt.executeQuery("select * from " + tableNames[x]);
+//                String[] arr = new String[analyzeDataSentLimit];
+//                int loopCount = 0;
+//                while (rs.next()) {
+//                    arr[loopCount++] = rs.getString(1);
+//                    if (loopCount == analyzeDataSentLimit) {
+//                        analyzeExecutor.submit(new BulkAnalyzer2(arr, loopCount));
+//                        loopCount = 0;
+//                    }
+//                    while (threadInfo("analyze waiting") >= analyzeMaxWaitingThreads) {
+//                        Thread.sleep(500);
+//                    }
+//                }
+//                analyzeExecutor.submit(new BulkAnalyzer2(arr, loopCount));
+//                display.increaseProgress();
+//            }
+//            while (threadInfo("analyze active") != 0) {
+//                Thread.sleep(100);
+//            }
+//            display.increaseProgress();
+//         //   writeMaskObjArrayToCSV(maskData);
+//            writeNumberArrayToCSV(maskData_allNumbers, maskData_allNumbersIncrement,
+//                    maskData_startNumbers, maskData_startNumbersIncrement, maskData_endNumbers,
+//                    maskData_endNumbersIncrement);
+//
+//            writeWordArrayToCSV(dicWords, dicWordsCount, dicLastNames, dicLastNamesCount);
+//
+//            display.stopDisplay();
+//            displayThread.join();
+//        } catch (SQLException ex) {
+//            System.out.println("error from Main Class [2]");
+//            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
+//        } catch (InterruptedException ex) {
+//            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//
+//        System.out.println("\nCount: " + myFormatter.format(analyzedTotalCount));
+//        System.out.println("Length: " + myFormatter2.format(analyzedTotalLength / (double) analyzedTotalCount));
+//        System.out.println("All words passwords: " + myFormatter.format(countWithallWords) + " "
+//                + myFormatter2.format(((countWithallWords / (double) analyzedTotalCount)) * 100) + "%");
+//        System.out.println("Mask Array         :" + myFormatter2.format((maskDataCount / (double) maskObjArraySize) * 100.0) + "% full");
+//        System.out.println("All numbers array  :" + myFormatter2.format((maskData_allNumbersCount / (double) maskNumberArraySize) * 100.0) + "% full");
+//        System.out.println("Start numbers array:" + myFormatter2.format((maskData_startNumbersCount / (double) maskNumberArraySize) * 100.0) + "% full");
+//        System.out.println("End numbers array  :" + myFormatter2.format((maskData_endNumbersCount / (double) maskNumberArraySize) * 100.0) + "% full");
+//        System.out.println("Mask Data -> D:\\log\\results.csv");
+//
+//      //  maskData = null;
+//        maskData_allNumbers = null;
+//        maskData_startNumbers = null;
+//        maskData_endNumbers = null;
+//    }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
@@ -416,25 +424,25 @@ public class Clavis {
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
 
-    public static void writeMaskObjArrayToCSV(MaskObj[] arr) {
-        BufferedWriter outputWriter = null;
-        try {
-            outputWriter = new BufferedWriter(new FileWriter(resultsMaskLocation, false));
-
-            for (int x = 0; x < maskDataCount; x++) {
-                outputWriter.write(arr[x].maskValue + "," + arr[x].maskCount);
-                outputWriter.newLine();
-            }
-            outputWriter.flush();
-            outputWriter.close();
-        } catch (IOException ex) {
-            System.out.println("error from Main Class [4]");
-            Logger
-                    .getLogger(Clavis.class
-                            .getName()).log(Level.SEVERE, null, ex);
-        }
-
-    }
+//    public static void writeMaskObjArrayToCSV(MaskObj[] arr) {
+//        BufferedWriter outputWriter = null;
+//        try {
+//            outputWriter = new BufferedWriter(new FileWriter(resultsMaskLocation, false));
+//
+//            for (int x = 0; x < maskDataCount; x++) {
+//                outputWriter.write(arr[x].maskValue + "," + arr[x].maskCount);
+//                outputWriter.newLine();
+//            }
+//            outputWriter.flush();
+//            outputWriter.close();
+//        } catch (IOException ex) {
+//            System.out.println("error from Main Class [4]");
+//            Logger
+//                    .getLogger(Clavis.class
+//                            .getName()).log(Level.SEVERE, null, ex);
+//        }
+//
+//    }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
@@ -551,35 +559,35 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-    public static boolean readFromLog(String x) {
-        String filename;
-        if (databaseName.equals("clavis_main")) {
-            filename = main_log;
-        } else {
-            filename = backup_log;
-        }
-        BufferedReader br;
-        try {
-            br = new BufferedReader(new FileReader(filename));
-            String st;
-            while ((st = br.readLine()) != null) {
-                if (x.equals(st)) {
-                    return true;
-                }
-            }
-        } catch (FileNotFoundException ex) {
-            System.out.println("error from Main Class [5]");
-            Logger
-                    .getLogger(Clavis.class
-                            .getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            System.out.println("error from Main Class [6]");
-            Logger
-                    .getLogger(Clavis.class
-                            .getName()).log(Level.SEVERE, null, ex);
-        }
-        return false;
-    }
+//    public static boolean readFromLog(String x) {
+//        String filename;
+//        if (databaseName.equals("clavis_main")) {
+//            filename = main_log;
+//        } else {
+//            filename = backup_log;
+//        }
+//        BufferedReader br;
+//        try {
+//            br = new BufferedReader(new FileReader(filename));
+//            String st;
+//            while ((st = br.readLine()) != null) {
+//                if (x.equals(st)) {
+//                    return true;
+//                }
+//            }
+//        } catch (FileNotFoundException ex) {
+//            System.out.println("error from Main Class [5]");
+//            Logger
+//                    .getLogger(Clavis.class
+//                            .getName()).log(Level.SEVERE, null, ex);
+//        } catch (IOException ex) {
+//            System.out.println("error from Main Class [6]");
+//            Logger
+//                    .getLogger(Clavis.class
+//                            .getName()).log(Level.SEVERE, null, ex);
+//        }
+//        return false;
+//    }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
@@ -638,12 +646,9 @@ public class Clavis {
         File[] files = new File(txtDirectory).listFiles((dir, name) -> name.endsWith(".txt"));
         for (int x = 0; x < files.length; x++) {
             if (files[x].isFile()) {// might be unesesarry
-                if (readFromLog(files[x].getName())) {
-                    System.out.printf("%s%-25s%s", ANSI_RED, ((x + 1) + ". " + files[x].getName()), RESET);
-
-                } else {
+          
                     System.out.printf("%-25s", ((x + 1) + ". " + files[x].getName()));
-                }
+                
 
                 if (x % 2 == 1) {
                     System.out.println();
@@ -658,14 +663,14 @@ public class Clavis {
 
             System.out.println("------------------ BULK INSERT ALL ----------------");
             for (int x = 0; x < files.length; x++) {
-                if (!readFromLog(files[x].getName())) {
-                    if (connected) {
+             
+            
                         bulkInsert(files[x].getName());
-                    }
-                    if (connected) {
-                        addLogtoFile(files[x].getName());
-                    }
-                }
+                    
+//                    if (connected) {
+//                        addLogtoFile(files[x].getName());
+//                    }
+                
 
             }
         } else if (input.matches("![0-9, /,]+")) {
@@ -677,12 +682,12 @@ public class Clavis {
             for (int x = 0; x < values.length; x++) {
                 int inputInt = Integer.parseInt(values[x]);
                 if (inputInt > 0 && inputInt <= files.length) {
-                    if (connected) {
+                  
                         bulkInsert(files[inputInt - 1].getName());
-                    }
-                    if (connected) {
-                        addLogtoFile(files[inputInt - 1].getName());
-                    }
+                    
+                    
+                        
+                    
 
                 } else {
                     System.out.println("input out of range");
@@ -862,16 +867,34 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
     static long insertInvalidCount;
 
-    static void bulkInsert(String file) {
+    static void bulkInsert(String file) { 
         increment = 0;
         long lineCount = fileSize(file);
         System.out.printf("%-25s %25s%n", "File: " + file, "Word count: " + myFormatter.format(lineCount));
+        //
         bulkExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(maxActiveThreads);
         Display display = new Display(lineCount, "insert", updateTime);
         Thread displayThread = new Thread(display);
         displayThread.start();
+        //
         Thread thread2 = new AutoCommit(AutoCommitWaitTime);
         thread2.start();
+        
+        
+        System.out.println(file+"  ");
+  
+        if(!isTablePresent(file)){
+            // TODO: fix if has "-"
+             String sql = "CREATE TABLE "+DATABASE+"."+file+
+                   " (pass VARCHAR(30));"; 
+             System.out.println(sql);
+            try {
+                stmt.executeUpdate(sql);
+            } catch (SQLException ex) {
+                Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
         try {
             BufferedReader in = new BufferedReader(new FileReader(txtDirectory + file));
             String[] export = new String[export_amount];// might need to +1
@@ -881,7 +904,7 @@ public class Clavis {
             while (line != null) {
                 export[count++] = line;
                 if (count == export_amount) {
-                    bulkExecutor.submit(new BulkHandler(export, count));
+                    bulkExecutor.submit(new BulkHandler(export, count,file));
                     export = null;
                     count = 0;
                     export = new String[export_amount];
@@ -892,7 +915,7 @@ public class Clavis {
                 line = in.readLine();
             }
             ////////////////////////////////////////////////////////////////////
-            bulkExecutor.submit(new BulkHandler(export, count));
+            bulkExecutor.submit(new BulkHandler(export, count,file));
             while (((ThreadPoolExecutor) bulkExecutor).getActiveCount() > 0) {
                 Thread.sleep(100);
             }
@@ -1045,18 +1068,18 @@ public class Clavis {
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
 
-    static synchronized void insertMask_sync(String mask) {
-        //boolean found = false;
-        for (int x = 0; x < Clavis.maskDataCount; x++) {
-            if (mask.equals(Clavis.maskData[x].maskValue)) {
-                Clavis.maskData[x].maskCount++;
-                return;
-            }
-        }
-        // if (!found) {
-        Clavis.maskData[Clavis.maskDataCount++] = new MaskObj(mask);
-        // }
-    }
+//    static synchronized void insertMask_sync(String mask) {
+//        //boolean found = false;
+//        for (int x = 0; x < Clavis.maskDataCount; x++) {
+//            if (mask.equals(Clavis.maskData[x].maskValue)) {
+//                Clavis.maskData[x].maskCount++;
+//                return;
+//            }
+//        }
+//        // if (!found) {
+//        Clavis.maskData[Clavis.maskDataCount++] = new MaskObj(mask);
+//        // }
+//    }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
