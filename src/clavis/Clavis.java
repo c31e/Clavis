@@ -133,9 +133,7 @@ public class Clavis {
             //System.out.println("-------------------------|-------------------------");
             System.out.println("---------------------- MENU -----------------------");
             //System.out.println("1. ------------- 2. ------------- 3. -------------");
-            System.out.println("1)Add passwords    2)Find Password  3)Hash password");
-            System.out.println("4)Clean database   5)Erase data     6)Statistics");
-            System.out.println("7)about            8)Analyze                  ");
+            System.out.println("1)Add passwords    2)Statistics  3)Delete Table");
 
             System.out.print("Select (1-8 or exit): ");
 
@@ -147,15 +145,15 @@ public class Clavis {
             } else if (input.equals("1")) {
                 selectFiles();
             } else if (input.equals("2")) {
-                findHash();
-            } else if (input.equals("3")) {
-                hashText();
-            } else if (input.equals("4")) {
-                cleanDatabase();
-            } else if (input.equals("5")) {
-                deleteAll();
-            } else if (input.equals("6")) {
                 showStatistics();
+            } else if (input.equals("3")) {
+                dropTable();
+            } else if (input.equals("4")) {
+
+            } else if (input.equals("5")) {
+
+            } else if (input.equals("6")) {
+
             } else if (input.equals("7")) {
                 System.out.println("Created by Daniel Brewer on 6/02/19");
             } else if (input.equals("8")) {
@@ -182,25 +180,41 @@ public class Clavis {
         return databases.contains(table);
     }
 
-    public static boolean isTablePresent(String table) {
-        ArrayList<String> databases = new ArrayList();
+//    public static boolean isTablePresent(String table) {
+//        ArrayList<String> databases = new ArrayList();
+//        try {
+//            DatabaseMetaData md = conn.getMetaData();
+//            ResultSet rs = md.getTables(null, null, "%", null);
+//            while (rs.next()) {
+//
+//                databases.add(rs.getString(3));
+//
+//            }
+//        } catch (SQLException ex) {
+//            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        return databases.contains(table);
+//    }
+
+    public static ArrayList getTableList() {
+         ArrayList<String> tables = new ArrayList();
         try {
-            DatabaseMetaData md = conn.getMetaData();
-            ResultSet rs = md.getTables(null, null, "%", null);
+
+           
+            ResultSet rs = conn.getMetaData().getTables(null, "dbo", "%", new String[]{"TABLE"});
             while (rs.next()) {
-
-                databases.add(rs.getString(3));
-
+                tables.add(rs.getString("TABLE_NAME"));
             }
+
         } catch (SQLException ex) {
             Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return databases.contains(table);
+        return tables;
     }
+
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-
     public static void initialize() {
 
     }
@@ -633,28 +647,21 @@ public class Clavis {
         long total = 0;
 
         try {
-           // DatabaseMetaData metaData = ;
-            //String[] types = {"TABLE"};
-            ResultSet rs = conn.getMetaData().getTables(null, "dbo", "%",new String[] {"TABLE"});
-            
-            
+            ResultSet rs = conn.getMetaData().getTables(null, "dbo", "%", new String[]{"TABLE"});
+
             while (rs.next()) {
                 String tableName = rs.getString("TABLE_NAME");
-                System.out.println(tableName+" "+tableSize(tableName));
+                System.out.println(tableName + " " + tableSize(tableName));
             }
-        
 
-    }
-    catch (SQLException e) {
+        } catch (SQLException e) {
             System.err.println("Something went wrong!");
-        e.printStackTrace();
-        return;
-    }
+            e.printStackTrace();
+            return;
+        }
 
-    System.out.println (
-            
-
-"\nTotal: " + myFormatter.format(total));
+        System.out.println(
+                "\nTotal: " + myFormatter.format(total));
     }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
@@ -729,41 +736,29 @@ public class Clavis {
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
 
-    public static void deleteAll() {
+    public static void dropTable() {
         try {
             System.out.println("----------------- ERASE ALL DATA ------------------");
 
-            for (int x = 0; x < tableNames.length; x++) {
-                System.out.print("\b\b\b\b\b\b\b\b\bdrop " + x);
-                stmt.executeUpdate("drop table if exists " + tableNames[x]);
+            
+            ArrayList<String> tables = getTableList();
+            
+            for(int x=0;x<tables.size();x++){
+                System.out.println((x+1)+". "+tables.get(x));
+                
             }
-            for (int x = 0; x < tableNames.length; x++) {
-                System.out.print("\b\b\b\b\b\b\b\b\b\bcreate " + x);
-                stmt.executeUpdate("CREATE TABLE " + tableNames[x] + " (pass varchar(20))");
-            }
-            System.out.print("\b\b\b\b\b\b\b\b\b\bComplete, all data erased and tables rebuilt!\n");
-            String filename;
-            //TODO: replace txt for history with table
-            filename = main_log;
-
-            BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename, false));
-            outputWriter.write("");
-            outputWriter.flush();
-            outputWriter.close();
-        } catch (IOException ex) {
-            System.out.println("error from Main Class [8]");
-            Logger
-
-.getLogger(Clavis.class  
-
-.getName()).log(Level.SEVERE, null, ex);
+            System.out.print("Chose table to delete:");
+            String input = in.next();
+            int input2 = Integer.parseInt(input);
+            //TODO: make sure input is valid
+            
+            //if(input>tables.size() && input > 0)
+            
+            stmt.executeUpdate("drop table if exists " + tables.get(input2-1));
+            
+    
         } catch (SQLException ex) {
             System.out.println("error from Main Class [9]");
-            Logger
-
-.getLogger(Clavis.class  
-
-.getName()).log(Level.SEVERE, null, ex);
         }
     }
 ////////////////////////////////////////////////////////////////////////////////
@@ -856,10 +851,8 @@ public class Clavis {
         } catch (SQLException ex) {
             System.out.println("error from Main Class [10]");
             Logger
-
-.getLogger(Clavis.class  
-
-.getName()).log(Level.SEVERE, null, ex);
+                    .getLogger(Clavis.class
+                            .getName()).log(Level.SEVERE, null, ex);
         }
         display.stopDisplay();
         try {
@@ -868,10 +861,8 @@ public class Clavis {
         } catch (InterruptedException ex) {
             System.out.println("error from Main Class [11]");
             Logger
-
-.getLogger(Clavis.class  
-
-.getName()).log(Level.SEVERE, null, ex);
+                    .getLogger(Clavis.class
+                            .getName()).log(Level.SEVERE, null, ex);
         }
         if (foundID != -1) {
 
@@ -905,19 +896,17 @@ public class Clavis {
         displayThread.start();
         Thread thread2 = new AutoCommit(AutoCommitWaitTime);
         thread2.start();
-
-        if (!isTablePresent(file.substring(0, file.length() - 4))) {
+        
+        if (!getTableList().contains(file.substring(0, file.length() - 4))) {
             // TODO: fix if has "-"
-            String sql = "CREATE TABLE " + file.substring(0, file.length() - 4)
-                    + " (pass VARCHAR(30));";
+            String sql = "CREATE TABLE " + file.substring(0, file.length() - 4)+" (pass VARCHAR(30));";
 
             try {
                 stmt.executeUpdate(sql);
 
-} catch (SQLException ex) {
-                Logger.getLogger(Clavis.class  
-
-.getName()).log(Level.SEVERE, null, ex);
+            } catch (SQLException ex) {
+                Logger.getLogger(Clavis.class
+                        .getName()).log(Level.SEVERE, null, ex);
             }
 
         }
@@ -956,23 +945,17 @@ public class Clavis {
 
             displayThread.join();
 
-} catch (IOException ex) {
-            Logger.getLogger(Clavis.class  
-
-.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(Clavis.class
+                    .getName()).log(Level.SEVERE, null, ex);
         } catch (SQLException ex) {
             System.out.println(command);
             Logger
-
-.getLogger(Clavis.class  
-
-.getName()).log(Level.SEVERE, null, ex);
-        }
-
-catch (InterruptedException ex) {
-            Logger.getLogger(Clavis.class  
-
-.getName()).log(Level.SEVERE, null, ex);
+                    .getLogger(Clavis.class
+                            .getName()).log(Level.SEVERE, null, ex);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Clavis.class
+                    .getName()).log(Level.SEVERE, null, ex);
         }
 
         System.out.printf("\n%-25s%26s\n", "Avg speed: " + myFormatter.format(((double) increment / (double) totalTime) * 1000.00) + "/s",
