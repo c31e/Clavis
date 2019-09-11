@@ -17,8 +17,10 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.DecimalFormat;
@@ -76,7 +78,7 @@ public class Clavis {
 
     //
     static int AutoCommitWaitTime = 20000;
-    static int export_amount = 100000;       // amount of data given to each thread 15000 best
+    // amount of data given to each thread 15000 best
     static int maxActiveThreads = 30;       // how many active theads it will reach
     //
     static int maxQuerySize = 1000;         // max amount of variables sql will allow 
@@ -97,16 +99,14 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
     public static void main(String[] args) {
         System.out.println("-------------------- START UP ---------------------");
-    
+
         try {
             Class.forName(DRIVER).newInstance();
-            conn = DriverManager.getConnection("jdbc:sqlserver://"+IP+":"+PORT, USERNAME,PASSWORD);
+            conn = DriverManager.getConnection("jdbc:sqlserver://" + IP + ":" + PORT, USERNAME, PASSWORD);
             System.out.println("Connected to Server");
             stmt = conn.createStatement();
 
-           
-            
-            if (isTablePresent(DATABASE)) {
+            if (isDatabasePresent(DATABASE)) {
                 System.out.println("using database \'" + DATABASE + "\'");
             } else {
                 initialize();
@@ -116,7 +116,7 @@ public class Clavis {
             stmt.executeUpdate("use " + DATABASE);
 
         } catch (SQLServerException e) {
-            System.out.println("failed to connect:\n" + IP+":"+PORT);
+            System.out.println("failed to connect:\n" + IP + ":" + PORT);
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | SQLException ex) {
             System.out.println("error from Main Class [1]");
             Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
@@ -164,14 +164,32 @@ public class Clavis {
         }
         System.out.println("-------------------- GOODBYTE ---------------------");
     }
-    
-    public static boolean isTablePresent(String table){ 
+
+    public static boolean isDatabasePresent(String table) {
         ArrayList<String> databases = new ArrayList();
         try {
             ResultSet rs = conn.getMetaData().getCatalogs();
             while (rs.next()) {
                 String temp = rs.getString("TABLE_CAT");
+                //System.out.println(temp);
                 databases.add(temp);
+
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return databases.contains(table);
+    }
+
+    public static boolean isTablePresent(String table) {
+        ArrayList<String> databases = new ArrayList();
+        try {
+            DatabaseMetaData md = conn.getMetaData();
+            ResultSet rs = md.getTables(null, null, "%", null);
+            while (rs.next()) {
+
+                databases.add(rs.getString(3));
 
             }
         } catch (SQLException ex) {
@@ -182,14 +200,9 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-    
-    public static void initialize(){
-        
-        
-        
-        
-        
-        
+
+    public static void initialize() {
+
     }
 
     public static int threadInfo(String x) {
@@ -387,7 +400,6 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-
     static class StringLengthComparator implements Comparator<String> {
 
         @Override
@@ -446,7 +458,6 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-
     public static void writeNumberArrayToCSV(String[] arr1, int[] arr1Count,
             String[] arr2, int[] arr2Count, String[] arr3, int[] arr3Count) {
 
@@ -591,7 +602,6 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-
     public static int cleanTable(String tableName) {
         int result = 0;
         String sql = "WITH cteDuplicate AS \n"
@@ -621,16 +631,30 @@ public class Clavis {
         System.out.println("------------------ STATISTICS ---------------------");
 
         long total = 0;
-        for (int x = 0; x < tableNames.length; x++) {
-            if (x == 4 || x == 8 || x == 12) {
-                System.out.println();
-            }
-            long temp = tableSize(tableNames[x]);
-            total = total + temp;
-            System.out.printf("%s: %-9s", tableNames[x].substring(4, 5), temp);
 
-        }
-        System.out.println("\nTotal: " + myFormatter.format(total));
+        try {
+           // DatabaseMetaData metaData = ;
+            //String[] types = {"TABLE"};
+            ResultSet rs = conn.getMetaData().getTables(null, "dbo", "%",new String[] {"TABLE"});
+            
+            
+            while (rs.next()) {
+                String tableName = rs.getString("TABLE_NAME");
+                System.out.println(tableName+" "+tableSize(tableName));
+            }
+        
+
+    }
+    catch (SQLException e) {
+            System.err.println("Something went wrong!");
+        e.printStackTrace();
+        return;
+    }
+
+    System.out.println (
+            
+
+"\nTotal: " + myFormatter.format(total));
     }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
@@ -646,9 +670,8 @@ public class Clavis {
         File[] files = new File(txtDirectory).listFiles((dir, name) -> name.endsWith(".txt"));
         for (int x = 0; x < files.length; x++) {
             if (files[x].isFile()) {// might be unesesarry
-          
-                    System.out.printf("%-25s", ((x + 1) + ". " + files[x].getName()));
-                
+
+                System.out.printf("%-25s", ((x + 1) + ". " + files[x].getName()));
 
                 if (x % 2 == 1) {
                     System.out.println();
@@ -663,15 +686,12 @@ public class Clavis {
 
             System.out.println("------------------ BULK INSERT ALL ----------------");
             for (int x = 0; x < files.length; x++) {
-             
-            
-                        bulkInsert(files[x].getName());
-                    
+
+                bulkInsert(files[x].getName());
+
 //                    if (connected) {
 //                        addLogtoFile(files[x].getName());
 //                    }
-                
-
             }
         } else if (input.matches("![0-9, /,]+")) {
             System.out.println("Wrong input please enter number");
@@ -682,12 +702,8 @@ public class Clavis {
             for (int x = 0; x < values.length; x++) {
                 int inputInt = Integer.parseInt(values[x]);
                 if (inputInt > 0 && inputInt <= files.length) {
-                  
-                        bulkInsert(files[inputInt - 1].getName());
-                    
-                    
-                        
-                    
+
+                    bulkInsert(files[inputInt - 1].getName());
 
                 } else {
                     System.out.println("input out of range");
@@ -728,8 +744,8 @@ public class Clavis {
             System.out.print("\b\b\b\b\b\b\b\b\b\bComplete, all data erased and tables rebuilt!\n");
             String filename;
             //TODO: replace txt for history with table
-                filename = main_log;
-            
+            filename = main_log;
+
             BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename, false));
             outputWriter.write("");
             outputWriter.flush();
@@ -737,13 +753,17 @@ public class Clavis {
         } catch (IOException ex) {
             System.out.println("error from Main Class [8]");
             Logger
-                    .getLogger(Clavis.class
-                            .getName()).log(Level.SEVERE, null, ex);
+
+.getLogger(Clavis.class  
+
+.getName()).log(Level.SEVERE, null, ex);
         } catch (SQLException ex) {
             System.out.println("error from Main Class [9]");
             Logger
-                    .getLogger(Clavis.class
-                            .getName()).log(Level.SEVERE, null, ex);
+
+.getLogger(Clavis.class  
+
+.getName()).log(Level.SEVERE, null, ex);
         }
     }
 ////////////////////////////////////////////////////////////////////////////////
@@ -836,8 +856,10 @@ public class Clavis {
         } catch (SQLException ex) {
             System.out.println("error from Main Class [10]");
             Logger
-                    .getLogger(Clavis.class
-                            .getName()).log(Level.SEVERE, null, ex);
+
+.getLogger(Clavis.class  
+
+.getName()).log(Level.SEVERE, null, ex);
         }
         display.stopDisplay();
         try {
@@ -846,8 +868,10 @@ public class Clavis {
         } catch (InterruptedException ex) {
             System.out.println("error from Main Class [11]");
             Logger
-                    .getLogger(Clavis.class
-                            .getName()).log(Level.SEVERE, null, ex);
+
+.getLogger(Clavis.class  
+
+.getName()).log(Level.SEVERE, null, ex);
         }
         if (foundID != -1) {
 
@@ -865,80 +889,113 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-    static long insertInvalidCount;
 
-    static void bulkInsert(String file) { 
-        increment = 0;
+    static int export_amount = 1000;
+
+    static void bulkInsert(String file) {
+
         long lineCount = fileSize(file);
+
         System.out.printf("%-25s %25s%n", "File: " + file, "Word count: " + myFormatter.format(lineCount));
         //
         bulkExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(maxActiveThreads);
+        //
         Display display = new Display(lineCount, "insert", updateTime);
         Thread displayThread = new Thread(display);
         displayThread.start();
-        //
         Thread thread2 = new AutoCommit(AutoCommitWaitTime);
         thread2.start();
-        
-        
-        System.out.println(file+"  ");
-  
-        if(!isTablePresent(file)){
+
+        if (!isTablePresent(file.substring(0, file.length() - 4))) {
             // TODO: fix if has "-"
-             String sql = "CREATE TABLE "+DATABASE+"."+file+
-                   " (pass VARCHAR(30));"; 
-             System.out.println(sql);
+            String sql = "CREATE TABLE " + file.substring(0, file.length() - 4)
+                    + " (pass VARCHAR(30));";
+
             try {
                 stmt.executeUpdate(sql);
-            } catch (SQLException ex) {
-                Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
+
+} catch (SQLException ex) {
+                Logger.getLogger(Clavis.class  
+
+.getName()).log(Level.SEVERE, null, ex);
             }
+
         }
-        
+        String command = "";
         try {
             BufferedReader in = new BufferedReader(new FileReader(txtDirectory + file));
-            String[] export = new String[export_amount];// might need to +1
-            String line = in.readLine();
-            ////////////////////////////////////////////////////////////////////
             int count = 0;
+            String[] exportArray = new String[export_amount];
+            String line = in.readLine();
+            //
             while (line != null) {
-                export[count++] = line;
+
+                if (valid(line)) {
+                    exportArray[count++] = clean(line);
+                }
+
                 if (count == export_amount) {
-                    bulkExecutor.submit(new BulkHandler(export, count,file));
-                    export = null;
+                    command = "insert into " + file.substring(0, file.length() - 4) + " (pass) Values";
+                    for (int x = 0; x < count - 1; x++) {
+
+                        command = command + "('" + exportArray[x] + "'),";
+
+                    }
+                    command = command + "('" + exportArray[count - 1] + "');";
+
+                    stmt.executeUpdate(command);
+                    increment = increment + exportArray.length;
+                    exportArray = null;
                     count = 0;
-                    export = new String[export_amount];
+                    exportArray = new String[export_amount];
                 }
-                while (((ThreadPoolExecutor) bulkExecutor).getActiveCount() > (maxActiveThreads + MaxWaitingThreads)) {
-                    Thread.sleep(500);
-                }
+
                 line = in.readLine();
             }
-            ////////////////////////////////////////////////////////////////////
-            bulkExecutor.submit(new BulkHandler(export, count,file));
-            while (((ThreadPoolExecutor) bulkExecutor).getActiveCount() > 0) {
-                Thread.sleep(100);
-            }
             display.stopDisplay();
+
             displayThread.join();
-        } catch (FileNotFoundException ex) {
-            System.out.println("error from Main Class [12]");
+
+} catch (IOException ex) {
+            Logger.getLogger(Clavis.class  
+
+.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException ex) {
+            System.out.println(command);
             Logger
-                    .getLogger(Clavis.class
-                            .getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            System.out.println("error from Main Class [13]");
-            Logger
-                    .getLogger(Clavis.class
-                            .getName()).log(Level.SEVERE, null, ex);
-        } catch (InterruptedException ex) {
-            System.out.println("error from Main Class [14]");
-            Logger
-                    .getLogger(Clavis.class
-                            .getName()).log(Level.SEVERE, null, ex);
+
+.getLogger(Clavis.class  
+
+.getName()).log(Level.SEVERE, null, ex);
         }
+
+catch (InterruptedException ex) {
+            Logger.getLogger(Clavis.class  
+
+.getName()).log(Level.SEVERE, null, ex);
+        }
+
         System.out.printf("\n%-25s%26s\n", "Avg speed: " + myFormatter.format(((double) increment / (double) totalTime) * 1000.00) + "/s",
-                "Invalid:" + myFormatter.format(insertInvalidCount));
+                "Invalid:" + myFormatter.format(0));
+    }
+
+    public static boolean valid(String x) {
+        if (x.length() > 30) {
+            return false;
+        }
+        if (x.length() < 5) {
+            return false;
+        }
+        if (!x.matches("\\A\\p{ASCII}*\\z")) {
+            return false;
+        }
+        return true;
+    }
+
+    public static String clean(String x) {
+        x = x.replace("\'", "\'\'");
+        // x = x.replace('\"', '!');
+        return x;
     }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
@@ -1083,7 +1140,6 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-
     static synchronized void totalCount_sync(long x) {
         Clavis.analyzedTotalCount += x;
     }
