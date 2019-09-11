@@ -23,6 +23,8 @@ public class Display extends Thread {
         this.mode = mode;
         this.updateTime = updateTime;
         this.setPriority(10);
+        
+        
     }
 
     @Override
@@ -30,35 +32,10 @@ public class Display extends Thread {
         try {
             millis_startTime = System.currentTimeMillis();
             switch (mode) {
-                case "find":
-                    while (proceed) {
-                        System.out.printf("%sSearching...%39s", clear, timeConvert(System.currentTimeMillis() - millis_startTime));
-                        updateHelper();
-                        Thread.sleep(updateTime);
-                    }
-                    break;
-                case "clean":
-                    while (proceed) {
-                        System.out.printf("%sCleaning [%3.0f%%]%36s", clear, ((double) progress / totalCount) * 100, timeConvert(System.currentTimeMillis() - millis_startTime));
-                        updateHelper();
-                        Thread.sleep(updateTime);
-                    }
-                    break;
-                case "analyze":
-                    while (proceed && Clavis.connected) {
-                        if (progress == 17) {
-                            System.out.printf("%sAnalyze Writing to file... %23s%s", clear,
-                                    timeConvert(System.currentTimeMillis() - millis_startTime), ((ThreadPoolExecutor) Clavis.analyzeExecutor).getActiveCount());
-                        } else {
-                            System.out.printf("%sAnalyze [%3.0f%%]%33s %s/%s ", clear, (progress / (double) totalCount) * 100,
-                                    timeConvert(System.currentTimeMillis() - millis_startTime), ((ThreadPoolExecutor) Clavis.analyzeExecutor).getActiveCount(), Clavis.analyzeExecutor.getQueue().size());
-                        }
-                        updateHelper();
-                        Thread.sleep(updateTime);
-                    }
+
 
                     
-                    break;
+                   
                 case "insert":
                     long lastIncrement = 0;
                     while (proceed) {
