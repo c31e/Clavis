@@ -664,9 +664,9 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-    public static final String ANSI_RED = "\u001B[31m";
-
-    public static final String RESET = "\u001B[0m";
+   // public static final String ANSI_RED = "\u001B[31m";
+//
+    //public static final String RESET = "\u001B[0m";
     // public static final String BLUE_BACKGROUND = "\u001B[41m";
     //  public static final String BLACK = "\u001B[30m";
 
