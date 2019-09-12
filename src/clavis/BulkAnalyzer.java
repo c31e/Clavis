@@ -18,8 +18,8 @@ public class BulkAnalyzer implements Runnable {
 
     private final String[] arr;
     private int count;
-    private long localTotalCount=0;
-    private long localTotalLength =0;
+    private  static long localTotalCount=0;
+    private static long localTotalLength =0;
 
     BulkAnalyzer(String[] arr, int count) {
         this.arr = arr;
@@ -60,7 +60,16 @@ public class BulkAnalyzer implements Runnable {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+        
+        
+        sendResults();
+    }
+    public static void sendResults(){
+        Clavis.resultClass.totalLengthSum = localTotalLength;
+        Clavis.resultClass.totalAnalyzedCount = localTotalCount;
+        Clavis.increment = localTotalCount;
+        
+        
     }
 
 

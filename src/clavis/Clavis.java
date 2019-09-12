@@ -215,34 +215,26 @@ public class Clavis {
     public static void initialize() {
 
     }
-    
-      public static void analyzeTable(){
-        
-          
-          
-          
-    }
 
-//    public static int threadInfo(String x) {
-//        if (x.equals("analyze active")) {
-//            return analyzeExecutor.getActiveCount();
-//        } else if (x.equals("analyze waiting")) {
-//            return analyzeExecutor.getQueue().size();
-//        } else if (x.equals("insert active")) {
-//            return bulkExecutor.getActiveCount();
-//        } else if (x.equals("insert waiting")) {
-//            return bulkExecutor.getQueue().size();
-//        }
-//        return -1;
-//    }
+    public static int threadInfo(String x) {
+        if (x.equals("analyze active")) {
+            return analyzeExecutor.getActiveCount();
+        } else if (x.equals("analyze waiting")) {
+            return analyzeExecutor.getQueue().size();
+        } else if (x.equals("insert active")) {
+            return bulkExecutor.getActiveCount();
+        } else if (x.equals("insert waiting")) {
+            return bulkExecutor.getQueue().size();
+        }
+        return -1;
+    }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
 //static List<MaskObj> maskData = new ArrayList<MaskObj>();
-//    static ThreadPoolExecutor analyzeExecutor;
-//    static int analyzeDataSentLimit = 10000;
-//    static int analyzeMaxActiveThreads = 4;
-//    static int analyzeMaxWaitingThreads = 2;
+//    
+
+//
 //    //
 //    static int analyzedTotalCount;
 //    static long analyzedTotalLength;
@@ -269,6 +261,61 @@ public class Clavis {
 //    static int[] dicLastNamesCount;
 ////
 //    static int countWithallWords;
+    static int analyzeMaxWaitingThreads = 2;
+    static ThreadPoolExecutor analyzeExecutor;
+    static int analyzeMaxActiveThreads = 4;
+    static int analyzeDataSentLimit = 10000;
+    static Results resultClass;
+
+    public static void analyzeTable() {
+        
+        resultClass = new Results();
+        analyzeExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(analyzeMaxActiveThreads);
+
+        Display display = new Display(tableSize("xato"), "analyze", updateTime);
+        Thread displayThread = new Thread(display);
+
+        displayThread.start();
+   
+        String[] arr = new String[analyzeDataSentLimit];
+        try {
+
+            ResultSet rs = stmt.executeQuery("select * from xato");
+            int loopCount = 0;
+         
+            while (rs.next()) {
+                arr[loopCount++] = rs.getString(1);
+                if (loopCount == analyzeDataSentLimit) {
+              
+                    analyzeExecutor.submit(new BulkAnalyzer(arr, loopCount));
+                    loopCount = 0;
+                }
+                while (threadInfo("analyze waiting") >= analyzeMaxWaitingThreads) {
+                     
+                    Thread.sleep(500);
+                }
+            }
+
+            analyzeExecutor.submit(new BulkAnalyzer(arr, loopCount));
+           // display.increaseProgress();
+
+            while (threadInfo("analyze active") != 0) {
+                Thread.sleep(100);
+            }
+      
+          //  display.increaseProgress();
+            display.stopDisplay();
+
+            displayThread.join();
+
+        } catch (SQLException ex) {
+            System.out.println("error from Main Class [2]");
+            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        resultClass.printResults();
+    }
 
 //    public static void analyzeDatabase() {
 //        System.out.println("--------------------- ANALYZE ---------------------");
@@ -664,7 +711,7 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-   // public static final String ANSI_RED = "\u001B[31m";
+    // public static final String ANSI_RED = "\u001B[31m";
 //
     //public static final String RESET = "\u001B[0m";
     // public static final String BLUE_BACKGROUND = "\u001B[41m";
@@ -880,6 +927,7 @@ public class Clavis {
     //static int executeBatchEvery = 2000;
 
     static void bulkInsert(String file) {
+
         invalid_count = 0;
         increment = 0;
         long lineCount = fileLineCount(file);
@@ -918,8 +966,7 @@ public class Clavis {
                 }
                 line = in.readLine();
             }
-            
-            
+
             buildBulkInsertCommand(file, count, exportArray, commit);
             commit.stopCommiting();
             //TODO: make sure it will always do last commit
@@ -936,7 +983,8 @@ public class Clavis {
         } catch (SQLException ex) {
             Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
         }
-
+//        System.out.println(increment);
+//        System.out.println(totalTime);
         System.out.printf("\n%-25s%26s\n", "Avg speed: " + largeNumberFormatter.format(((double) increment / (double) totalTime) * 1000.00) + "/s",
                 "Invalid:" + largeNumberFormatter.format(invalid_count));
     }

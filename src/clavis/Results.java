@@ -6,12 +6,19 @@
 package clavis;
 
 public class Results {
-    long totalLengthSum=0;
-    long totalAnalyzedCount = 0;
+    static long totalLengthSum=0;
+    static long totalAnalyzedCount = 0;
     Results(){
         
         
         
+    }
+    
+    
+    public static void printResults(){
+        System.out.println("\nTotal Analyzed count:"+totalAnalyzedCount);
+        System.out.println("Total length count:"+totalLengthSum);
+        System.out.println("length/count:"+(totalLengthSum/totalAnalyzedCount));
     }
     
     
