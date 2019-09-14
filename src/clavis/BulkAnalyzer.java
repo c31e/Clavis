@@ -11,6 +11,11 @@ class MaskObj {
         this.maskValue = maskValue;
         this.maskCount = 1;
     }
+    
+    
+   
+    
+    
 
 }
 
@@ -20,6 +25,8 @@ public class BulkAnalyzer implements Runnable {
     private int count;
     private  static long localTotalCount=0;
     private static long localTotalLength =0;
+   // private static char[] charArray = new char[100];
+   //  private static int[] charArrayCount = new int[100];
 
     BulkAnalyzer(String[] arr, int count) {
         this.arr = arr;
@@ -45,13 +52,18 @@ public class BulkAnalyzer implements Runnable {
     public void run() {
         try {
             for (int x = 0; x < count; x++) {
+                
+                
 
                 //String temp = generateMask(arr[x]);
-                //String temp2 = arr[x];
-
+                String temp2 = arr[x];
+                
                 localTotalCount++;
-                localTotalLength += arr[x].length();
-
+                localTotalLength += temp2.length();
+                characterCount(temp2);
+                
+                
+                
                 //findMatches(arr[x]);
                 //findNumbers(temp,temp2);
                 // Clavis.insertMask_sync(generateMask(arr[x]));
@@ -68,6 +80,40 @@ public class BulkAnalyzer implements Runnable {
         Clavis.resultClass.totalLengthSum = localTotalLength;
         Clavis.resultClass.totalAnalyzedCount = localTotalCount;
         Clavis.increment = localTotalCount;
+       
+        
+        
+    
+    }
+    
+    public static void characterCount(String input){
+        
+        
+        for(int x = 0;x<input.length();x++){
+            char temp = input.charAt(x);
+            for(int y =0;y<Clavis.resultClass.charArray.length;y++){
+                
+                 if(Clavis.resultClass.charArray[y]==null){
+                    Clavis.resultClass.charArray[y]=new charObj();
+                    Clavis.resultClass.charArray[y].addObj(temp);
+                    break;
+                }else if(Clavis.resultClass.charArray[y].getCharValue()==temp){
+                     Clavis.resultClass.charArray[y].incrementCount();
+                     break;
+                }
+               
+                
+                
+            }
+                
+            
+            
+            
+            
+            
+            
+        }
+        
         
         
     }

@@ -43,19 +43,10 @@ public class Clavis {
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
 
-    //static String main_log = "D:\\log\\main_log.txt";
-    //static String backup_log = "D:\\log\\backup_log.txt";
     static String txtDirectory = "C:\\passwords\\";
-    //static String dictionaryEnglishWordsDirectory = "dictionaries\\words_alpha.txt";
-    //static String dictionaryEnglishLastNamesDirectory = "dictionaries\\last-names.txt";
-    //static String resultsMaskLocation = "D:\\log\\maskResults.csv";
-    //static String resultsNumberLocation = "D:\\log\\numberResults.csv";
-    //static String resultsWordLocation = "D:\\log\\wordResults.csv";
     static Statement stmt = null;
-
     static Connection conn = null;
 
-    //static Boolean proceed = true;
     static DecimalFormat largeNumberFormatter = new DecimalFormat("#,###");
     static DecimalFormat smallNumberFormatter = new DecimalFormat("##.##");
 
@@ -105,7 +96,7 @@ public class Clavis {
             System.out.println("Connected to Server");
             stmt = conn.createStatement();
 
-            if (isDatabasePresent(DATABASE)) {
+            if (getDatabaseList().contains(DATABASE)) {
                 System.out.println("using database \'" + DATABASE + "\'");
             } else {
                 initialize();
@@ -162,7 +153,7 @@ public class Clavis {
         System.out.println("-------------------- GOODBYTE ---------------------");
     }
 
-    public static boolean isDatabasePresent(String table) {
+    public static ArrayList getDatabaseList() {
         ArrayList<String> databases = new ArrayList();
         try {
             ResultSet rs = conn.getMetaData().getCatalogs();
@@ -176,24 +167,9 @@ public class Clavis {
             Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        return databases.contains(table);
+        return databases;
     }
 
-//    public static boolean isTablePresent(String table) {
-//        ArrayList<String> databases = new ArrayList();
-//        try {
-//            DatabaseMetaData md = conn.getMetaData();
-//            ResultSet rs = md.getTables(null, null, "%", null);
-//            while (rs.next()) {
-//
-//                databases.add(rs.getString(3));
-//
-//            }
-//        } catch (SQLException ex) {
-//            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-//        return databases.contains(table);
-//    }
     public static ArrayList getTableList() {
         ArrayList<String> tables = new ArrayList();
         try {
@@ -231,36 +207,32 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-//static List<MaskObj> maskData = new ArrayList<MaskObj>();
-//    
 
-//
-//    //
-//    static int analyzedTotalCount;
-//    static long analyzedTotalLength;
-//    //
-//    //static MaskObj[] maskData;
-//    static int maskDataCount;
-//    //
-//    static String[] maskData_allNumbers;
-//    static String[] maskData_startNumbers;
-//    static String[] maskData_endNumbers;
-//    static int[] maskData_allNumbersIncrement;
-//    static int[] maskData_startNumbersIncrement;
-//    static int[] maskData_endNumbersIncrement;
-//    static int maskData_allNumbersCount;
-//    static int maskData_startNumbersCount;
-//    static int maskData_endNumbersCount;
-//    //
-//
-//    static int maskObjArraySize = 500000000;
-//    static int maskNumberArraySize = 10000000;
-//    static String[] dicWords;
-//    static String[] dicLastNames;
-//    static int[] dicWordsCount;
-//    static int[] dicLastNamesCount;
-////
-//    static int countWithallWords;
+    public static int vertifySelection(String input, int min, int max) {
+
+        if (input == null) {
+            System.out.println("Must enter input");
+            return -1;
+        }
+        if (input.length() == 0) {
+            System.out.println("Must have length");
+            return -1;
+        }
+        if(!input.chars().allMatch(Character::isDigit)){
+            System.out.println("Must be digit");
+            return -1;
+        }
+        int inputInt = Integer.parseInt(input);
+        if(inputInt>max){
+            System.out.println("digit to large range["+min+","+max+"]");
+            return -1;
+        }
+        if(inputInt<min){
+            System.out.println("digit to small range["+min+","+max+"]");
+            return -1;
+        }
+        return inputInt;
+    }
     static int analyzeMaxWaitingThreads = 2;
     static ThreadPoolExecutor analyzeExecutor;
     static int analyzeMaxActiveThreads = 4;
@@ -269,41 +241,57 @@ public class Clavis {
 
     public static void analyzeTable() {
         
+resultClass = null;
+        ArrayList<String> tables = getTableList();
+
+        for (int x = 0; x < tables.size(); x++) {
+            System.out.println((x + 1) + ". " + tables.get(x));
+        }
+        System.out.print("Chose table to analyze:");
+
+        String input = in.nextLine();
+        int selection = vertifySelection(input, 1, tables.size());
+        System.out.println(selection);
+        if(selection==-1)return;
+        
+        
+        
+        
         resultClass = new Results();
         analyzeExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(analyzeMaxActiveThreads);
 
-        Display display = new Display(tableSize("xato"), "analyze", updateTime);
+        Display display = new Display(tableSize( tables.get(selection-1)), "analyze", updateTime);
         Thread displayThread = new Thread(display);
 
         displayThread.start();
-   
+
         String[] arr = new String[analyzeDataSentLimit];
         try {
 
-            ResultSet rs = stmt.executeQuery("select * from xato");
+            ResultSet rs = stmt.executeQuery("select * from " + tables.get(selection-1));
             int loopCount = 0;
-         
+
             while (rs.next()) {
                 arr[loopCount++] = rs.getString(1);
                 if (loopCount == analyzeDataSentLimit) {
-              
+
                     analyzeExecutor.submit(new BulkAnalyzer(arr, loopCount));
                     loopCount = 0;
                 }
                 while (threadInfo("analyze waiting") >= analyzeMaxWaitingThreads) {
-                     
+
                     Thread.sleep(500);
                 }
             }
 
             analyzeExecutor.submit(new BulkAnalyzer(arr, loopCount));
-           // display.increaseProgress();
+            // display.increaseProgress();
 
             while (threadInfo("analyze active") != 0) {
                 Thread.sleep(100);
             }
-      
-          //  display.increaseProgress();
+
+            //  display.increaseProgress();
             display.stopDisplay();
 
             displayThread.join();
@@ -317,374 +305,6 @@ public class Clavis {
         resultClass.printResults();
     }
 
-//    public static void analyzeDatabase() {
-//        System.out.println("--------------------- ANALYZE ---------------------");
-//        //System.out.println(fileSize(dictionaryEnglishWordsDirectory));
-//        //System.out.println(fileSize(dictionaryEnglishLastNamesDirectory));
-//        dicWords = new String[369650];
-//        dicWordsCount = new int[369650];
-//
-//        dicLastNames = new String[88698];
-//        dicLastNamesCount = new int[88698];
-//        try {
-//            BufferedReader in = new BufferedReader(new FileReader(txtDirectory + dictionaryEnglishWordsDirectory));
-//            String line = in.readLine();
-//            int x = 0;
-//            while (line != null) {
-//                if (line.length() > 2) {
-//                    dicWords[x] = line.toLowerCase();
-//                    x++;
-//                }
-//
-//                line = in.readLine();
-//            }
-//            //
-//            in = new BufferedReader(new FileReader(txtDirectory + dictionaryEnglishLastNamesDirectory));
-//            line = in.readLine();
-//            x = 0;
-//            while (line != null) {
-//                if (line.length() > 2) {
-//                    dicLastNames[x] = line.toLowerCase();
-//                    x++;
-//                }
-//
-//                line = in.readLine();
-//            }
-//
-//        } catch (FileNotFoundException ex) {
-//            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
-//        } catch (IOException ex) {
-//            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-////        for(int x =0;x<1000000;x++){
-////            if(dicWords[x]==null){
-////                System.out.println(x);
-////                break;
-////            }
-////        }
-////        for(int x =0;x<1000000;x++){
-////            if(dicLastNames[x]==null){
-////                System.out.println(x);
-////                break;
-////            }
-////        }
-//
-//        Arrays.sort(dicWords, new StringLengthComparator());
-//        Arrays.sort(dicLastNames, new StringLengthComparator());
-////        for (int x = 0; x < dicWords.length; x++) {
-////
-////            if (dicWords[x].contains("testing")) {
-////                System.out.println("testing " + x);
-////            }
-////            if (dicWords[x].contains("test")) {
-////                System.out.println("test " + x + "original:" + dicWords[x]);
-////            }
-////
-////        }
-//
-//        // dicWords
-//        //dicLastNames
-//        countWithallWords = 0;
-//      //  maskData = new MaskObj[maskObjArraySize];//limit 2 billion//500000000
-//        maskData_allNumbers = new String[maskNumberArraySize];
-//        maskData_startNumbers = new String[maskNumberArraySize];
-//        maskData_endNumbers = new String[maskNumberArraySize];
-//        maskData_allNumbersIncrement = new int[maskNumberArraySize];
-//        maskData_startNumbersIncrement = new int[maskNumberArraySize];
-//        maskData_endNumbersIncrement = new int[maskNumberArraySize];
-//        //
-//
-//        maskDataCount = 0;
-//        analyzedTotalCount = 0;
-//        analyzedTotalLength = 0;
-//
-//        maskData_allNumbersCount = 0;
-//        maskData_startNumbersCount = 0;
-//        maskData_endNumbersCount = 0;
-//
-//        analyzeExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(analyzeMaxActiveThreads);
-//        Display display = new Display((long) 16, "analyze", updateTime);
-//        Thread displayThread = new Thread(display);
-//
-//        displayThread.start();
-//
-//        try {
-//            for (int x = 0; x < tableNames.length; x++) {
-//                ResultSet rs = stmt.executeQuery("select * from " + tableNames[x]);
-//                String[] arr = new String[analyzeDataSentLimit];
-//                int loopCount = 0;
-//                while (rs.next()) {
-//                    arr[loopCount++] = rs.getString(1);
-//                    if (loopCount == analyzeDataSentLimit) {
-//                        analyzeExecutor.submit(new BulkAnalyzer2(arr, loopCount));
-//                        loopCount = 0;
-//                    }
-//                    while (threadInfo("analyze waiting") >= analyzeMaxWaitingThreads) {
-//                        Thread.sleep(500);
-//                    }
-//                }
-//                analyzeExecutor.submit(new BulkAnalyzer2(arr, loopCount));
-//                display.increaseProgress();
-//            }
-//            while (threadInfo("analyze active") != 0) {
-//                Thread.sleep(100);
-//            }
-//            display.increaseProgress();
-//         //   writeMaskObjArrayToCSV(maskData);
-//            writeNumberArrayToCSV(maskData_allNumbers, maskData_allNumbersIncrement,
-//                    maskData_startNumbers, maskData_startNumbersIncrement, maskData_endNumbers,
-//                    maskData_endNumbersIncrement);
-//
-//            writeWordArrayToCSV(dicWords, dicWordsCount, dicLastNames, dicLastNamesCount);
-//
-//            display.stopDisplay();
-//            displayThread.join();
-//        } catch (SQLException ex) {
-//            System.out.println("error from Main Class [2]");
-//            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
-//        } catch (InterruptedException ex) {
-//            Logger.getLogger(Clavis.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-//
-//        System.out.println("\nCount: " + myFormatter.format(analyzedTotalCount));
-//        System.out.println("Length: " + myFormatter2.format(analyzedTotalLength / (double) analyzedTotalCount));
-//        System.out.println("All words passwords: " + myFormatter.format(countWithallWords) + " "
-//                + myFormatter2.format(((countWithallWords / (double) analyzedTotalCount)) * 100) + "%");
-//        System.out.println("Mask Array         :" + myFormatter2.format((maskDataCount / (double) maskObjArraySize) * 100.0) + "% full");
-//        System.out.println("All numbers array  :" + myFormatter2.format((maskData_allNumbersCount / (double) maskNumberArraySize) * 100.0) + "% full");
-//        System.out.println("Start numbers array:" + myFormatter2.format((maskData_startNumbersCount / (double) maskNumberArraySize) * 100.0) + "% full");
-//        System.out.println("End numbers array  :" + myFormatter2.format((maskData_endNumbersCount / (double) maskNumberArraySize) * 100.0) + "% full");
-//        System.out.println("Mask Data -> D:\\log\\results.csv");
-//
-//      //  maskData = null;
-//        maskData_allNumbers = null;
-//        maskData_startNumbers = null;
-//        maskData_endNumbers = null;
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    static class StringLengthComparator implements Comparator<String> {
-//
-//        @Override
-//        public int compare(String s1, String s2) {
-//            return s2.length() - s1.length(); // compare length of Strings
-//        }
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    public static void cleanDatabase() {
-//        System.out.println("-------------------- CLEANING ---------------------");
-//        Display display = new Display((long) 16, "clean", updateTime);
-//        Thread displayThread = new Thread(display);
-//        displayThread.start();
-//        int total = 0;
-//        for (String tableName : tableNames) {
-//            total = total + cleanTable(tableName);
-//            display.increaseProgress();
-//        }
-//        display.stopDisplay();
-//        try {
-//            displayThread.join();
-//        } catch (InterruptedException ex) {
-//            System.out.println("error from Main Class [3]");
-//            Logger
-//                    .getLogger(Clavis.class
-//                            .getName()).log(Level.SEVERE, null, ex);
-//        }
-//        System.out.println("\n" + largeNumberFormatter.format(total) + " rows affected");
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    public static void writeMaskObjArrayToCSV(MaskObj[] arr) {
-//        BufferedWriter outputWriter = null;
-//        try {
-//            outputWriter = new BufferedWriter(new FileWriter(resultsMaskLocation, false));
-//
-//            for (int x = 0; x < maskDataCount; x++) {
-//                outputWriter.write(arr[x].maskValue + "," + arr[x].maskCount);
-//                outputWriter.newLine();
-//            }
-//            outputWriter.flush();
-//            outputWriter.close();
-//        } catch (IOException ex) {
-//            System.out.println("error from Main Class [4]");
-//            Logger
-//                    .getLogger(Clavis.class
-//                            .getName()).log(Level.SEVERE, null, ex);
-//        }
-//
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    public static void writeNumberArrayToCSV(String[] arr1, int[] arr1Count,
-//            String[] arr2, int[] arr2Count, String[] arr3, int[] arr3Count) {
-//
-//        BufferedWriter outputWriter = null;
-//        try {
-//            outputWriter = new BufferedWriter(new FileWriter(resultsNumberLocation, false));
-//            outputWriter.write("All numbers,count,,start numbers,count,,end numbers,count");
-//            outputWriter.newLine();
-//            for (int x = 0; x < maskNumberArraySize; x++) {
-//                if (arr1Count[x] != 0) {
-//                    outputWriter.write(arr1[x] + "," + arr1Count[x] + ",,");
-//                } else {
-//                    outputWriter.write(",,,");
-//                }
-//                if (arr2Count[x] != 0) {
-//                    outputWriter.write(arr2[x] + "," + arr2Count[x] + ",,");
-//                } else {
-//                    outputWriter.write(",,,");
-//                }
-//                if (arr3Count[x] != 0) {
-//                    outputWriter.write(arr3[x] + "," + arr3Count[x] + ",,");
-//                } else {
-//                    outputWriter.write(",,,");
-//                }
-//
-//                outputWriter.newLine();
-//                if (arr1Count[x] == 0 && arr2Count[x] == 0 && arr3Count[x] == 0) {
-//                    break;
-//                }
-//            }
-//
-//            outputWriter.flush();
-//            outputWriter.close();
-//        } catch (IOException ex) {
-//            System.out.println("error from Main Class [4]");
-//            Logger
-//                    .getLogger(Clavis.class
-//                            .getName()).log(Level.SEVERE, null, ex);
-//        }
-//
-//    }
-    ////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    public static void writeWordArrayToCSV(String[] arr1, int[] arr1Count,
-//            String[] arr2, int[] arr2Count) {
-//
-//        BufferedWriter outputWriter = null;
-//        try {
-//            outputWriter = new BufferedWriter(new FileWriter(resultsWordLocation, false));
-//            outputWriter.write("English Dictionary Words,count,,English Last Names,count");
-//            outputWriter.newLine();
-//            for (int x = 0; x < 400000; x++) {
-//                if (x >= arr1Count.length) {
-//                    outputWriter.write(",,,");
-//                } else {
-//                    outputWriter.write(arr1[x] + "," + arr1Count[x] + ",,");
-//                }
-//                //
-//                if (x >= arr2Count.length) {
-//                    outputWriter.write(",,,");
-//                } else {
-//                    outputWriter.write(arr2[x] + "," + arr2Count[x] + ",,");
-//                }
-//
-//                outputWriter.newLine();
-////                if (arr1Count[x] == 0 && arr2Count[x] == 0) {
-////                    break;
-////                }
-//            }
-//
-//            outputWriter.flush();
-//            outputWriter.close();
-//        } catch (IOException ex) {
-//            System.out.println("error from Main Class [4]");
-//            Logger
-//                    .getLogger(Clavis.class
-//                            .getName()).log(Level.SEVERE, null, ex);
-//        }
-//
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    public static void addLogtoFile(String x) {
-//        String filename;
-//        if (databaseName.equals("clavis_main")) {
-//            filename = main_log;
-//        } else {
-//            filename = backup_log;
-//        }
-//        BufferedWriter outputWriter = null;
-//        try {
-//            outputWriter = new BufferedWriter(new FileWriter(filename, true));
-//            outputWriter.write(x + "");
-//            outputWriter.newLine();
-//            outputWriter.flush();
-//            outputWriter.close();
-//        } catch (IOException ex) {
-//            System.out.println("error from Main Class [4]");
-//            Logger
-//                    .getLogger(Clavis.class
-//                            .getName()).log(Level.SEVERE, null, ex);
-//        }
-//
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    public static boolean readFromLog(String x) {
-//        String filename;
-//        if (databaseName.equals("clavis_main")) {
-//            filename = main_log;
-//        } else {
-//            filename = backup_log;
-//        }
-//        BufferedReader br;
-//        try {
-//            br = new BufferedReader(new FileReader(filename));
-//            String st;
-//            while ((st = br.readLine()) != null) {
-//                if (x.equals(st)) {
-//                    return true;
-//                }
-//            }
-//        } catch (FileNotFoundException ex) {
-//            System.out.println("error from Main Class [5]");
-//            Logger
-//                    .getLogger(Clavis.class
-//                            .getName()).log(Level.SEVERE, null, ex);
-//        } catch (IOException ex) {
-//            System.out.println("error from Main Class [6]");
-//            Logger
-//                    .getLogger(Clavis.class
-//                            .getName()).log(Level.SEVERE, null, ex);
-//        }
-//        return false;
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    public static int cleanTable(String tableName) {
-//        int result = 0;
-//        String sql = "WITH cteDuplicate AS \n"
-//                + "(\n"
-//                + "    SELECT \n"
-//                + "       pass\n"
-//                + "       ,ROW_NUMBER() OVER (PARTITION BY pass ORDER BY pass) RowNumber\n"
-//                + "    FROM  " + tableName + "\n"
-//                + ")\n"
-//                + "DELETE FROM cteDuplicate\n"
-//                + "WHERE RowNumber > 1";
-//        try {
-//            result = stmt.executeUpdate(sql);
-//        } catch (SQLException ex) {
-//            System.out.println("error from Main Class [7]");
-//            Logger
-//                    .getLogger(Clavis.class
-//                            .getName()).log(Level.SEVERE, null, ex);
-//        }
-//        return result;
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
     public static void showStatistics() {
         System.out.println("------------------ STATISTICS ---------------------");
 
@@ -708,14 +328,6 @@ public class Clavis {
         System.out.println(
                 "\nTotal: " + largeNumberFormatter.format(total));
     }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-    // public static final String ANSI_RED = "\u001B[31m";
-//
-    //public static final String RESET = "\u001B[0m";
-    // public static final String BLUE_BACKGROUND = "\u001B[41m";
-    //  public static final String BLACK = "\u001B[30m";
 
     public static void selectFiles() {
         System.out.println("---------------------- FILES ----------------------");
@@ -740,7 +352,6 @@ public class Clavis {
             for (int x = 0; x < files.length; x++) {
 
                 bulkInsert(files[x].getName());
-
 //                    if (connected) {
 //                        addLogtoFile(files[x].getName());
 //                    }
@@ -765,18 +376,7 @@ public class Clavis {
         }
 
     }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
 
-//    public static void hashText() {
-//        System.out.println("-------------------- HASH TEXT --------------------");
-//        System.out.print("Please enter Password to Hash: ");
-//        String input = in.next();
-//        input = input + in.nextLine();
-//        System.out.print(SHA1(input) + "\n");
-//
-//    }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
@@ -802,122 +402,6 @@ public class Clavis {
             System.out.println("error from Main Class [9]");
         }
     }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-
-//    public static void findHash() {
-//        long foundID = -1;
-//        String foundVar = "";
-//        String foundHash = "";
-//        System.out.println("------------------ FINDING HASH -------------------");
-//        System.out.println("Please enter SHA1 Hash to find: ");
-//        String input = in.next();
-//        input = input + in.nextLine();
-//        String tableName = "";
-//        String temp = input.substring(0, 1);
-//
-//        // TODO: maybe make better
-//        switch (temp) {
-//            case "0":
-//                tableName = "pwd_0";
-//                break;
-//            case "1":
-//                tableName = "pwd_1";
-//                break;
-//            case "2":
-//                tableName = "pwd_2";
-//                break;
-//            case "3":
-//                tableName = "pwd_3";
-//                break;
-//            case "4":
-//                tableName = "pwd_4";
-//                break;
-//            case "5":
-//                tableName = "pwd_5";
-//                break;
-//            case "6":
-//                tableName = "pwd_6";
-//                break;
-//            case "7":
-//                tableName = "pwd_7";
-//                break;
-//            case "8":
-//                tableName = "pwd_8";
-//                break;
-//            case "9":
-//                tableName = "pwd_9";
-//                break;
-//            case "a":
-//                tableName = "pwd_a";
-//                break;
-//            case "b":
-//                tableName = "pwd_b";
-//                break;
-//            case "c":
-//                tableName = "pwd_c";
-//                break;
-//            case "d":
-//                tableName = "pwd_d";
-//                break;
-//            case "e":
-//                tableName = "pwd_e";
-//                break;
-//            case "f":
-//                tableName = "pwd_f";
-//                break;
-//            default:
-//                System.out.println("Error text not hexDecimal");
-//                return;
-//        }
-//        System.out.println("Search space: " + largeNumberFormatter.format(tableSize(tableName)) + " from table " + tableName);
-//        ////////////////////////////////////////////////////////////////////////////////////////////////////////
-//        Display display = new Display((long) 0, "find", updateTime);
-//        Thread displayThread = new Thread(display);
-//        displayThread.start();
-//        ResultSet rs;
-//        try {
-//            rs = stmt.executeQuery("SELECT  pass FROM " + tableName + " ;");
-//            int x = 0;
-//            while (rs.next()) {
-//                x++;
-//                if (SHA1(rs.getString(1)).equals(input)) {
-//                    foundID = x;
-//                    foundVar = rs.getString(1);
-//                    foundHash = SHA1(rs.getString(1));
-//                    break;
-//                }
-//            }
-//        } catch (SQLException ex) {
-//            System.out.println("error from Main Class [10]");
-//            Logger
-//                    .getLogger(Clavis.class
-//                            .getName()).log(Level.SEVERE, null, ex);
-//        }
-//        display.stopDisplay();
-//        try {
-//            displayThread.join();
-//
-//        } catch (InterruptedException ex) {
-//            System.out.println("error from Main Class [11]");
-//            Logger
-//                    .getLogger(Clavis.class
-//                            .getName()).log(Level.SEVERE, null, ex);
-//        }
-//        if (foundID != -1) {
-//
-//            System.out.println("\n                  ! HASH Matched !");
-//            System.out.println("Password: " + foundVar + "\nIndex: " + largeNumberFormatter.format(foundID));
-//            System.out.println("Hash: " + foundHash);
-//
-//        } else {
-//
-//            System.out.print("\nSHA1 hash not found :(");
-//            System.out.println();
-//        }
-//
-//    }
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
@@ -1069,113 +553,3 @@ public class Clavis {
 ////////////////////////////////////////////////////////////////////////////////
 //============================================================================//
 ////////////////////////////////////////////////////////////////////////////////
-
-//    static String SHA1(String message) {
-//        MessageDigest digest;
-//        try {
-//            digest = MessageDigest.getInstance("SHA-1");
-//            digest.reset();
-//            digest.update(message.getBytes("utf8"));
-//            String sha1 = String.format("%040x", new BigInteger(1, digest.digest()));
-//            return sha1;
-//        } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
-//            System.out.println("error from Main Class [19]");
-//            e.printStackTrace();
-//        }
-//        return null;
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    static synchronized void disconnect(SQLServerException x, String y) {
-//        if (connected == true) {
-//            System.out.println("\nServer error:" + x);
-//            System.out.println(y);
-//            connected = false;
-//        }
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    static synchronized void insertNumber_sync(String input, int loc) {
-//        try {
-//
-//            if (input == null) {
-//                System.out.println("input==null");
-//            }
-//
-//            switch (loc) {
-//                case 1:
-//                    for (int x = 0; x < Clavis.maskData_allNumbersCount; x++) {
-//                        if (Clavis.maskData_allNumbers[x].equals(input)) {
-//                            Clavis.maskData_allNumbersIncrement[x]++;
-//                            return;
-//                        }
-//                    }
-//                    //if not found in array insert
-//                    Clavis.maskData_allNumbers[Clavis.maskData_allNumbersCount] = input;
-//                    Clavis.maskData_allNumbersIncrement[Clavis.maskData_allNumbersCount] = 1;
-//                    Clavis.maskData_allNumbersCount++;
-//                    break;
-//                case 2:
-//                    for (int x = 0; x < Clavis.maskData_startNumbersCount; x++) {
-//                        if (Clavis.maskData_startNumbers[x].equals(input)) {
-//                            Clavis.maskData_startNumbersIncrement[x]++;
-//                            return;
-//                        }
-//                    }
-//                    //if not found in array insert
-//                    Clavis.maskData_startNumbers[Clavis.maskData_startNumbersCount] = input;
-//                    Clavis.maskData_startNumbersIncrement[Clavis.maskData_startNumbersCount] = 1;
-//                    Clavis.maskData_startNumbersCount++;
-//                    break;
-//                case 3:
-//                    for (int x = 0; x < Clavis.maskData_endNumbersCount; x++) {
-//                        if (Clavis.maskData_endNumbers[x].equals(input)) {
-//                            Clavis.maskData_endNumbersIncrement[x]++;
-//                            return;
-//                        }
-//                    }
-//                    //if not found in array insert
-//                    Clavis.maskData_endNumbers[Clavis.maskData_endNumbersCount] = input;
-//                    Clavis.maskData_endNumbersIncrement[Clavis.maskData_endNumbersCount] = 1;
-//                    Clavis.maskData_endNumbersCount++;
-//                    break;
-//                default:
-//                    System.out.println("error in analyzer");
-//                    break;
-//            }
-//        } catch (Exception ex) {
-//            ex.printStackTrace();
-//        }
-//
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    static synchronized void insertMask_sync(String mask) {
-//        //boolean found = false;
-//        for (int x = 0; x < Clavis.maskDataCount; x++) {
-//            if (mask.equals(Clavis.maskData[x].maskValue)) {
-//                Clavis.maskData[x].maskCount++;
-//                return;
-//            }
-//        }
-//        // if (!found) {
-//        Clavis.maskData[Clavis.maskDataCount++] = new MaskObj(mask);
-//        // }
-//    }
-////////////////////////////////////////////////////////////////////////////////
-//============================================================================//
-////////////////////////////////////////////////////////////////////////////////
-//    static synchronized void totalCount_sync(long x) {
-//        Clavis.analyzedTotalCount += x;
-//    }
-//////////////////////////////////////////////////////////////////////////////////
-////============================================================================//
-//////////////////////////////////////////////////////////////////////////////////
-//
-//    static synchronized void totalLength_sync(long x) {
-//        Clavis.analyzedTotalLength += x;
-//    }
-//}
